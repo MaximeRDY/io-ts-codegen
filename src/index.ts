@@ -548,10 +548,7 @@ export const getNodeDependencies = (node: Node): Array<string> => {
   }
 }
 
-export function getTypeDeclarationGraph(
-  declarations: Array<TypeDeclaration | CustomTypeDeclaration>,
-  map: { [key: string]: TypeDeclaration | CustomTypeDeclaration }
-): Graph {
+export function getTypeDeclarationGraph(declarations: Array<TypeDeclaration | CustomTypeDeclaration>): Graph {
   const graph: Graph = {}
   declarations.forEach(d => {
     const vertex = (graph[d.name] = new Vertex(d.name))
@@ -790,7 +787,7 @@ export function sort(
   declarations: Array<TypeDeclaration | CustomTypeDeclaration>
 ): Array<TypeDeclaration | CustomTypeDeclaration> {
   const map = getTypeDeclarationMap(declarations)
-  const graph = getTypeDeclarationGraph(declarations, map)
+  const graph = getTypeDeclarationGraph(declarations)
   const { sorted, recursive } = tsort(graph)
   const keys = Object.keys(recursive)
   const recursions: Array<TypeDeclaration> = []

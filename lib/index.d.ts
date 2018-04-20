@@ -198,9 +198,7 @@ export declare function getTypeDeclarationMap(declarations: Array<TypeDeclaratio
     [key: string]: TypeDeclaration | CustomTypeDeclaration;
 };
 export declare const getNodeDependencies: (node: Node) => string[];
-export declare function getTypeDeclarationGraph(declarations: Array<TypeDeclaration | CustomTypeDeclaration>, map: {
-    [key: string]: TypeDeclaration | CustomTypeDeclaration;
-}): Graph;
+export declare function getTypeDeclarationGraph(declarations: Array<TypeDeclaration | CustomTypeDeclaration>): Graph;
 export declare function printRuntimeWithoutFormatting(node: Node): string;
 export declare function printRuntime(node: Node, options?: Options): string;
 export declare function sort(declarations: Array<TypeDeclaration | CustomTypeDeclaration>): Array<TypeDeclaration | CustomTypeDeclaration>;

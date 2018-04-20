@@ -141,12 +141,13 @@ export const Persons = t.array(Person)
     assert.strictEqual(
       tds.map(td => t.printStatic(td)).join('\n'),
       `export interface NotificationPayload {
-  userLanguage?: string,
-  notificationKind: NotificationKind,
-  params: { [key: string]: any },
-  workcellSerialNumber: string,
+  userLanguage?: string
+  notificationKind: NotificationKind
+  params: { [key: string]: any }
+  workcellSerialNumber: string
   workcellType: InstrumentType
-}`
+}
+`
     )
   })
 })
