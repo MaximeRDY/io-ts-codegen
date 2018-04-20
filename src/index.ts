@@ -1,3 +1,5 @@
+import * as prettier from 'prettier'
+
 export interface StringType {
   kind: 'StringType'
   name: 'string'
@@ -558,25 +560,6 @@ export function getTypeDeclarationGraph(
   return graph
 }
 
-const indentations: { [key: number]: string } = {
-  1: '  ',
-  2: '    ',
-  3: '      ',
-  4: '        ',
-  5: '          ',
-  6: '            ',
-  7: '              ',
-  8: '                ',
-  9: '                  '
-}
-
-function indent(i: number): string {
-  if (i === 0) {
-    return ''
-  }
-  return indentations[i] || new Array(i).join(`  `)
-}
-
 function escapeString(s: string): string {
   return "'" + s.replace(/'/g, "\\'") + "'"
 }
@@ -596,7 +579,7 @@ function escapePropertyKey(key: string): string {
   return isValidPropertyKey(key) ? key : escapeString(key)
 }
 
-function printRuntimeLiteralCombinator(literalCombinator: LiteralCombinator, i: number): string {
+function printRuntimeLiteralCombinator(literalCombinator: LiteralCombinator): string {
   const value =
     typeof literalCombinator.value === 'string' ? escapeString(literalCombinator.value) : literalCombinator.value
   let s = `t.literal(${value}`
@@ -605,9 +588,9 @@ function printRuntimeLiteralCombinator(literalCombinator: LiteralCombinator, i: 
   return s
 }
 
-function printDescription(description: string | undefined, i: number): string {
+function printDescription(description: string | undefined): string {
   if (description) {
-    return `${indent(i)}/** ${description} */\n`
+    return `/** ${description} */\n`
   }
   return ''
 }
@@ -628,33 +611,33 @@ function getRuntimePropertyType(p: Property): TypeReference {
   }
 }
 
-function printRuntimeProperty(p: Property, i: number): string {
+function printRuntimeProperty(p: Property): string {
   const type = getRuntimePropertyType(p)
-  return `${printDescription(p.description, i)}${indent(i)}${escapePropertyKey(p.key)}: ${printRuntime(type, i)}`
+  return `${printDescription(p.description)}${escapePropertyKey(p.key)}: ${printRuntimeWithoutFormatting(type)}`
 }
 
-function printRuntimeInterfaceCombinator(interfaceCombinator: InterfaceCombinator, i: number): string {
-  let s = 't.interface({\n'
-  s += interfaceCombinator.properties.map(p => printRuntimeProperty(p, i + 1)).join(',\n')
-  s += `\n${indent(i)}}`
+function printRuntimeInterfaceCombinator(interfaceCombinator: InterfaceCombinator): string {
+  let s = 't.interface({'
+  s += interfaceCombinator.properties.map(p => printRuntimeProperty(p)).join(',\n')
+  s += `}`
   s = addRuntimeName(s, interfaceCombinator.name)
   s += ')'
   return s
 }
 
-function printRuntimePartialCombinator(partialCombinator: PartialCombinator, i: number): string {
-  let s = 't.partial({\n'
-  s += partialCombinator.properties.map(p => printRuntimeProperty({ ...p, isOptional: false }, i + 1)).join(',\n')
-  s += `\n${indent(i)}}`
+function printRuntimePartialCombinator(partialCombinator: PartialCombinator): string {
+  let s = 't.partial({'
+  s += partialCombinator.properties.map(p => printRuntimeProperty({ ...p, isOptional: false })).join(',\n')
+  s += `}`
   s = addRuntimeName(s, partialCombinator.name)
   s += ')'
   return s
 }
 
-function printRuntimeStrictCombinator(strictCombinator: StrictCombinator, i: number): string {
-  let s = 't.strict({\n'
-  s += strictCombinator.properties.map(p => printRuntimeProperty(p, i + 1)).join(',\n')
-  s += `\n${indent(i)}}`
+function printRuntimeStrictCombinator(strictCombinator: StrictCombinator): string {
+  let s = 't.strict({'
+  s += strictCombinator.properties.map(p => printRuntimeProperty(p)).join(',\n')
+  s += `}`
   s = addRuntimeName(s, strictCombinator.name)
   s += ')'
   return s
@@ -663,66 +646,62 @@ function printRuntimeStrictCombinator(strictCombinator: StrictCombinator, i: num
 function printRuntimeTypesCombinator(
   combinatorKind: string,
   types: Array<TypeReference>,
-  combinatorName: string | undefined,
-  i: number
+  combinatorName: string | undefined
 ): string {
-  const indentation = indent(i + 1)
-  let s = `t.${combinatorKind}([\n`
-  s += types.map(t => `${indentation}${printRuntime(t, i + 1)}`).join(',\n')
-  s += `\n${indent(i)}]`
+  let s = `t.${combinatorKind}([`
+  s += types.map(t => `${printRuntimeWithoutFormatting(t)}`).join(',')
+  s += `]`
   s = addRuntimeName(s, combinatorName)
   s += ')'
   return s
 }
 
-function printRuntimeUnionCombinator(c: UnionCombinator, i: number): string {
-  return printRuntimeTypesCombinator('union', c.types, c.name, i)
+function printRuntimeUnionCombinator(c: UnionCombinator): string {
+  return printRuntimeTypesCombinator('union', c.types, c.name)
 }
 
-function printRuntimeTaggedUnionCombinator(c: TaggedUnionCombinator, i: number): string {
-  const indentation = indent(i + 1)
-  let s = `t.taggedUnion(${escapeString(c.tag)}, [\n`
-  s += c.types.map(t => `${indentation}${printRuntime(t, i + 1)}`).join(',\n')
-  s += `\n${indent(i)}]`
+function printRuntimeTaggedUnionCombinator(c: TaggedUnionCombinator): string {
+  let s = `t.taggedUnion(${escapeString(c.tag)}, [`
+  s += c.types.map(t => printRuntimeWithoutFormatting(t)).join(',')
+  s += `]`
   s = addRuntimeName(s, c.name)
   s += ')'
   return s
 }
 
-function printRuntimeIntersectionCombinator(c: IntersectionCombinator, i: number): string {
-  return printRuntimeTypesCombinator('intersection', c.types, c.name, i)
+function printRuntimeIntersectionCombinator(c: IntersectionCombinator): string {
+  return printRuntimeTypesCombinator('intersection', c.types, c.name)
 }
 
-function printRuntimeKeyofCombinator(c: KeyofCombinator, i: number): string {
-  const indentation = indent(i + 1)
-  let s = `t.keyof({\n`
-  s += c.values.map(v => `${indentation}${escapePropertyKey(v)}: true`).join(',\n')
-  s += `\n${indent(i)}}`
+function printRuntimeKeyofCombinator(c: KeyofCombinator): string {
+  let s = `t.keyof({`
+  s += c.values.map(v => `${escapePropertyKey(v)}: true`).join(',')
+  s += `}`
   s = addRuntimeName(s, c.name)
   s += ')'
   return s
 }
 
-function printRuntimeArrayCombinator(c: ArrayCombinator, i: number): string {
-  let s = `t.array(${printRuntime(c.type, i)}`
+function printRuntimeArrayCombinator(c: ArrayCombinator): string {
+  let s = `t.array(${printRuntimeWithoutFormatting(c.type)}`
   s = addRuntimeName(s, c.name)
   s += ')'
   return s
 }
 
-function printRuntimeReadonlyArrayCombinator(c: ReadonlyArrayCombinator, i: number): string {
-  let s = `t.readonlyArray(${printRuntime(c.type, i)}`
+function printRuntimeReadonlyArrayCombinator(c: ReadonlyArrayCombinator): string {
+  let s = `t.readonlyArray(${printRuntimeWithoutFormatting(c.type)}`
   s = addRuntimeName(s, c.name)
   s += ')'
   return s
 }
 
-function printRuntimeTupleCombinator(c: TupleCombinator, i: number): string {
-  return printRuntimeTypesCombinator('tuple', c.types, c.name, i)
+function printRuntimeTupleCombinator(c: TupleCombinator): string {
+  return printRuntimeTypesCombinator('tuple', c.types, c.name)
 }
 
-function printRuntimeTypeDeclaration(declaration: TypeDeclaration, i: number): string {
-  let s = printRuntime(declaration.type, i)
+function printRuntimeTypeDeclaration(declaration: TypeDeclaration): string {
+  let s = printRuntimeWithoutFormatting(declaration.type)
   if (declaration.isReadonly) {
     s = `t.readonly(${s})`
   }
@@ -733,22 +712,21 @@ function printRuntimeTypeDeclaration(declaration: TypeDeclaration, i: number): s
   return s
 }
 
-function printRuntimeRecursiveCombinator(c: RecursiveCombinator, i: number): string {
-  let s = `t.recursive<${c.typeParameter.name}>(${escapeString(c.name)}, (${c.name}: t.Any) => ${printRuntime(
-    c.type,
-    i
-  )}`
+function printRuntimeRecursiveCombinator(c: RecursiveCombinator): string {
+  let s = `t.recursive<${c.typeParameter.name}>(${escapeString(c.name)}, (${
+    c.name
+  }: t.Any) => ${printRuntimeWithoutFormatting(c.type)})`
   return s
 }
 
-function printRuntimeDictionaryCombinator(c: DictionaryCombinator, i: number): string {
-  let s = `t.dictionary(${printRuntime(c.domain, i)}, ${printRuntime(c.codomain, i)}`
+function printRuntimeDictionaryCombinator(c: DictionaryCombinator): string {
+  let s = `t.dictionary(${printRuntimeWithoutFormatting(c.domain)}, ${printRuntimeWithoutFormatting(c.codomain)}`
   s = addRuntimeName(s, c.name)
   s += ')'
   return s
 }
 
-export function printRuntime(node: Node, i: number = 0): string {
+export function printRuntimeWithoutFormatting(node: Node): string {
   switch (node.kind) {
     case 'Identifier':
       return node.name
@@ -765,37 +743,41 @@ export function printRuntime(node: Node, i: number = 0): string {
     case 'FunctionType':
       return `t.${node.name}`
     case 'LiteralCombinator':
-      return printRuntimeLiteralCombinator(node, i)
+      return printRuntimeLiteralCombinator(node)
     case 'InterfaceCombinator':
-      return printRuntimeInterfaceCombinator(node, i)
+      return printRuntimeInterfaceCombinator(node)
     case 'PartialCombinator':
-      return printRuntimePartialCombinator(node, i)
+      return printRuntimePartialCombinator(node)
     case 'StrictCombinator':
-      return printRuntimeStrictCombinator(node, i)
+      return printRuntimeStrictCombinator(node)
     case 'UnionCombinator':
-      return printRuntimeUnionCombinator(node, i)
+      return printRuntimeUnionCombinator(node)
     case 'TaggedUnionCombinator':
-      return printRuntimeTaggedUnionCombinator(node, i)
+      return printRuntimeTaggedUnionCombinator(node)
     case 'IntersectionCombinator':
-      return printRuntimeIntersectionCombinator(node, i)
+      return printRuntimeIntersectionCombinator(node)
     case 'KeyofCombinator':
-      return printRuntimeKeyofCombinator(node, i)
+      return printRuntimeKeyofCombinator(node)
     case 'ArrayCombinator':
-      return printRuntimeArrayCombinator(node, i)
+      return printRuntimeArrayCombinator(node)
     case 'ReadonlyArrayCombinator':
-      return printRuntimeReadonlyArrayCombinator(node, i)
+      return printRuntimeReadonlyArrayCombinator(node)
     case 'TupleCombinator':
-      return printRuntimeTupleCombinator(node, i)
+      return printRuntimeTupleCombinator(node)
     case 'RecursiveCombinator':
-      return printRuntimeRecursiveCombinator(node, i)
+      return printRuntimeRecursiveCombinator(node)
     case 'DictionaryCombinator':
-      return printRuntimeDictionaryCombinator(node, i)
+      return printRuntimeDictionaryCombinator(node)
     case 'TypeDeclaration':
-      return printRuntimeTypeDeclaration(node, i)
+      return printRuntimeTypeDeclaration(node)
     case 'CustomTypeDeclaration':
     case 'CustomCombinator':
       return node.runtime
   }
+}
+
+export function printRuntime(node: Node, options: Options = defaultOptions): string {
+  return prettier.format(printRuntimeWithoutFormatting(node), options)
 }
 
 function getRecursiveTypeDeclaration(declaration: TypeDeclaration): TypeDeclaration {
@@ -824,82 +806,79 @@ export function sort(
     .concat(recursions)
 }
 
-function printStaticProperty(p: Property, i: number): string {
+function printStaticProperty(p: Property): string {
   const optional = p.isOptional ? '?' : ''
-  return `${printDescription(p.description, i)}${indent(i)}${escapePropertyKey(p.key)}${optional}: ${printStatic(
-    p.type,
-    i
+  return `${printDescription(p.description)}${escapePropertyKey(p.key)}${optional}: ${printStaticWithoutFormatting(
+    p.type
   )}`
 }
 
-function printStaticLiteralCombinator(c: LiteralCombinator, i: number): string {
+function printStaticLiteralCombinator(c: LiteralCombinator): string {
   return typeof c.value === 'string' ? escapeString(c.value) : String(c.value)
 }
 
-function printStaticInterfaceCombinator(c: InterfaceCombinator, i: number): string {
-  let s = '{\n'
-  s += c.properties.map(p => printStaticProperty(p, i + 1)).join(',\n')
-  s += `\n${indent(i)}}`
+function printStaticInterfaceCombinator(c: InterfaceCombinator): string {
+  let s = '{'
+  s += c.properties.map(p => printStaticProperty(p)).join(',\n')
+  s += `}`
   return s
 }
 
-function printStaticPartialCombinator(c: PartialCombinator, i: number): string {
-  let s = '{\n'
-  s += c.properties.map(p => printStaticProperty({ ...p, isOptional: true }, i + 1)).join(',\n')
-  s += `\n${indent(i)}}`
+function printStaticPartialCombinator(c: PartialCombinator): string {
+  let s = '{'
+  s += c.properties.map(p => printStaticProperty({ ...p, isOptional: true })).join(',\n')
+  s += `}`
   return s
 }
 
-function printStaticStrictCombinator(c: StrictCombinator, i: number): string {
-  let s = '{\n'
-  s += c.properties.map(p => printStaticProperty(p, i + 1)).join(',\n')
-  s += `\n${indent(i)}}`
+function printStaticStrictCombinator(c: StrictCombinator): string {
+  let s = '{'
+  s += c.properties.map(p => printStaticProperty(p)).join(',\n')
+  s += `}`
   return s
 }
 
-function printStaticTypesCombinator(types: Array<TypeReference>, separator: string, i: number): string {
-  const indentation = indent(i + 1)
-  return types.map(t => `\n${indentation}${separator} ${printStatic(t, i)}`).join('')
+function printStaticTypesCombinator(types: Array<TypeReference>, separator: string): string {
+  return types.map(t => `${separator} ${printStaticWithoutFormatting(t)}`).join(' ')
 }
 
-function printStaticUnionCombinator(c: UnionCombinator, i: number): string {
-  return printStaticTypesCombinator(c.types, '|', i)
+function printStaticUnionCombinator(c: UnionCombinator): string {
+  return printStaticTypesCombinator(c.types, '|')
 }
 
-function printStaticTaggedUnionCombinator(c: TaggedUnionCombinator, i: number): string {
-  return printStaticTypesCombinator(c.types, '|', i)
+function printStaticTaggedUnionCombinator(c: TaggedUnionCombinator): string {
+  return printStaticTypesCombinator(c.types, '|')
 }
 
-function printStaticIntersectionCombinator(c: IntersectionCombinator, i: number): string {
-  return printStaticTypesCombinator(c.types, '&', i)
+function printStaticIntersectionCombinator(c: IntersectionCombinator): string {
+  return printStaticTypesCombinator(c.types, '&')
 }
 
-function printStaticKeyofCombinator(c: KeyofCombinator, i: number): string {
-  return printStatic(unionCombinator(c.values.map(value => literalCombinator(value))), i)
+function printStaticKeyofCombinator(c: KeyofCombinator): string {
+  return printStaticWithoutFormatting(unionCombinator(c.values.map(value => literalCombinator(value))))
 }
 
-function printStaticArrayCombinator(c: ArrayCombinator, i: number): string {
-  return `Array<${printStatic(c.type, i)}>`
+function printStaticArrayCombinator(c: ArrayCombinator): string {
+  return `Array<${printStaticWithoutFormatting(c.type)}>`
 }
 
-function printStaticReadonlyArrayCombinator(c: ReadonlyArrayCombinator, i: number): string {
-  return `ReadonlyArray<${printStatic(c.type, i)}>`
+function printStaticReadonlyArrayCombinator(c: ReadonlyArrayCombinator): string {
+  return `ReadonlyArray<${printStaticWithoutFormatting(c.type)}>`
 }
 
-function printStaticDictionaryCombinator(c: DictionaryCombinator, i: number): string {
-  return `{ [key: ${printStatic(c.domain, i)}]: ${printStatic(c.codomain, i)} }`
+function printStaticDictionaryCombinator(c: DictionaryCombinator): string {
+  return `{[ key: ${printStaticWithoutFormatting(c.domain)}]: ${printStaticWithoutFormatting(c.codomain)} }`
 }
 
-function printStaticTupleCombinator(c: TupleCombinator, i: number): string {
-  const indentation = indent(i + 1)
-  let s = '[\n'
-  s += c.types.map(t => `${indentation}${printStatic(t, i)}`).join(',\n')
-  s += `\n${indent(i)}]`
+function printStaticTupleCombinator(c: TupleCombinator): string {
+  let s = '['
+  s += c.types.map(t => `${printStaticWithoutFormatting(t)}`).join(',')
+  s += `]`
   return s
 }
 
-function printStaticTypeDeclaration(declaration: TypeDeclaration, i: number): string {
-  let s = printStatic(declaration.type, i)
+function printStaticTypeDeclaration(declaration: TypeDeclaration): string {
+  let s = printStaticWithoutFormatting(declaration.type)
   if (
     (declaration.type.kind === 'InterfaceCombinator' ||
       declaration.type.kind === 'StrictCombinator' ||
@@ -919,7 +898,7 @@ function printStaticTypeDeclaration(declaration: TypeDeclaration, i: number): st
   return s
 }
 
-export function printStatic(node: Node, i: number = 0): string {
+export function printStaticWithoutFormatting(node: Node): string {
   switch (node.kind) {
     case 'Identifier':
       return node.name
@@ -939,35 +918,49 @@ export function printStatic(node: Node, i: number = 0): string {
     case 'AnyDictionaryType':
       return '{ [key: string]: t.mixed }'
     case 'LiteralCombinator':
-      return printStaticLiteralCombinator(node, i)
+      return printStaticLiteralCombinator(node)
     case 'InterfaceCombinator':
-      return printStaticInterfaceCombinator(node, i)
+      return printStaticInterfaceCombinator(node)
     case 'PartialCombinator':
-      return printStaticPartialCombinator(node, i)
+      return printStaticPartialCombinator(node)
     case 'StrictCombinator':
-      return printStaticStrictCombinator(node, i)
+      return printStaticStrictCombinator(node)
     case 'UnionCombinator':
-      return printStaticUnionCombinator(node, i)
+      return printStaticUnionCombinator(node)
     case 'TaggedUnionCombinator':
-      return printStaticTaggedUnionCombinator(node, i)
+      return printStaticTaggedUnionCombinator(node)
     case 'IntersectionCombinator':
-      return printStaticIntersectionCombinator(node, i)
+      return printStaticIntersectionCombinator(node)
     case 'KeyofCombinator':
-      return printStaticKeyofCombinator(node, i)
+      return printStaticKeyofCombinator(node)
     case 'ArrayCombinator':
-      return printStaticArrayCombinator(node, i)
+      return printStaticArrayCombinator(node)
     case 'ReadonlyArrayCombinator':
-      return printStaticReadonlyArrayCombinator(node, i)
+      return printStaticReadonlyArrayCombinator(node)
     case 'TupleCombinator':
-      return printStaticTupleCombinator(node, i)
+      return printStaticTupleCombinator(node)
     case 'RecursiveCombinator':
-      return printStatic(node.type, i)
+      return printStaticWithoutFormatting(node.type)
     case 'DictionaryCombinator':
-      return printStaticDictionaryCombinator(node, i)
+      return printStaticDictionaryCombinator(node)
     case 'TypeDeclaration':
-      return printStaticTypeDeclaration(node, i)
+      return printStaticTypeDeclaration(node)
     case 'CustomTypeDeclaration':
     case 'CustomCombinator':
       return node.static
   }
+}
+
+export const defaultOptions: Options = {
+  parser: 'typescript',
+  semi: false,
+  singleQuote: true
+}
+
+export interface Options extends prettier.Options {
+  parser: 'typescript'
+}
+
+export function printStatic(node: Node, options: Options = defaultOptions): string {
+  return prettier.format(printStaticWithoutFormatting(node), options)
 }

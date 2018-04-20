@@ -14,22 +14,22 @@ export const userIdIso = iso<UserId>()`
     ]
     const tds = t.sort(declarations)
     assert.strictEqual(
-      tds.map(td => t.printStatic(td)).join('\n\n'),
+      tds.map(td => t.printStatic(td)).join('\n'),
       `export interface UserId extends Newtype<'UserId', string> {}
 
 export interface Person {
   id: UserId
-}`
+}
+`
     )
 
     assert.strictEqual(
-      tds.map(td => t.printRuntime(td)).join('\n\n'),
+      tds.map(td => t.printRuntime(td)).join('\n'),
       `export const UserId = fromNewtype<UserId>(t.string)
 export const userIdIso = iso<UserId>()
 
-export const Person = t.interface({
-  id: UserId
-})`
+export const Person = t.interface({ id: UserId })
+`
     )
   })
 
@@ -47,26 +47,26 @@ export const personIso = iso<Person>()`,
     ]
     const tds = t.sort(declarations)
     assert.strictEqual(
-      tds.map(td => t.printStatic(td)).join('\n\n'),
+      tds.map(td => t.printStatic(td)).join('\n'),
       `export interface RawPerson {
   id: string
 }
 
 export interface Person extends Newtype<'Person', RawPerson> {}
 
-export type Persons = Array<Person>`
+export type Persons = Array<Person>
+`
     )
 
     assert.strictEqual(
-      tds.map(td => t.printRuntime(td)).join('\n\n'),
-      `export const RawPerson = t.interface({
-  id: t.string
-})
+      tds.map(td => t.printRuntime(td)).join('\n'),
+      `export const RawPerson = t.interface({ id: t.string })
 
 export const Person = fromNewtype<Person>(RawPerson)
 export const personIso = iso<Person>()
 
-export const Persons = t.array(Person)`
+export const Persons = t.array(Person)
+`
     )
   })
 

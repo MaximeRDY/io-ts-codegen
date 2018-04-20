@@ -1,11 +1,11 @@
 import * as assert from 'assert'
-import { printStatic, printRuntime } from '../src'
+import { printStaticWithoutFormatting, printRuntime } from '../src'
 import { to, JSONSchema } from '../examples/json-schema'
 
 describe('json-schema', () => {
   it('string', () => {
     assert.strictEqual(
-      printStatic(
+      printStaticWithoutFormatting(
         to({
           type: 'string'
         })
@@ -16,21 +16,19 @@ describe('json-schema', () => {
 
   it('enum', () => {
     assert.strictEqual(
-      printStatic(
+      printStaticWithoutFormatting(
         to({
           type: 'string',
           enum: ['a', 'b']
         })
       ),
-      `
-  | 'a'
-  | 'b'`
+      `| 'a' | 'b'`
     )
   })
 
   it('number', () => {
     assert.strictEqual(
-      printStatic(
+      printStaticWithoutFormatting(
         to({
           type: 'number'
         })
@@ -41,7 +39,7 @@ describe('json-schema', () => {
 
   it('boolean', () => {
     assert.strictEqual(
-      printStatic(
+      printStaticWithoutFormatting(
         to({
           type: 'boolean'
         })
@@ -60,18 +58,8 @@ describe('json-schema', () => {
       },
       required: ['foo']
     }
-    assert.strictEqual(
-      printStatic(to(schema)),
-      `{
-  foo: string
-}`
-    )
+    assert.strictEqual(printStaticWithoutFormatting(to(schema)), '{foo: string}')
 
-    assert.strictEqual(
-      printRuntime(to(schema)),
-      `t.interface({
-  foo: t.string
-})`
-    )
+    assert.strictEqual(printRuntime(to(schema)), `t.interface({ foo: t.string })\n`)
   })
 })
